@@ -14,26 +14,34 @@ type CustomCommandAction struct {
 }
 
 func (self *CustomCommandAction) Call() error {
+	// println("GIRO")
+	self.c.Log.Debugf("LALAL")
 	return self.c.Prompt(types.PromptOpts{
 		Title:               self.c.Tr.CustomCommand,
 		FindSuggestionsFunc: self.GetCustomCommandsHistorySuggestionsFunc(),
 		HandleConfirm: func(command string) error {
-			if self.shouldSaveCommand(command) {
-				self.c.GetAppState().CustomCommandsHistory = utils.Limit(
-					lo.Uniq(append(self.c.GetAppState().CustomCommandsHistory, command)),
-					1000,
-				)
-			}
+			return self.c.Prompt(types.PromptOpts{
+				Title:               self.c.Tr.CustomCommand,
+                InitialContent: command,
+				HandleConfirm: func(newTerm string) error {
+					if self.shouldSaveCommand(command) {
+						self.c.GetAppState().CustomCommandsHistory = utils.Limit(
+							lo.Uniq(append(self.c.GetAppState().CustomCommandsHistory, command)),
+							1000,
+						)
+					}
 
-			err := self.c.SaveAppState()
-			if err != nil {
-				self.c.Log.Error(err)
-			}
+					err := self.c.SaveAppState()
+					if err != nil {
+						self.c.Log.Error(err)
+					}
 
-			self.c.LogAction(self.c.Tr.Actions.CustomCommand)
-			return self.c.RunSubprocessAndRefresh(
-				self.c.OS().Cmd.NewShell(command),
-			)
+					self.c.LogAction(self.c.Tr.Actions.CustomCommand)
+					return self.c.RunSubprocessAndRefresh(
+						self.c.OS().Cmd.NewShell(command),
+					)
+				},
+			})
 		},
 	})
 }
